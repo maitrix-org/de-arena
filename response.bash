@@ -1,0 +1,2 @@
+export CUDA_VISIBLE_DEVICES=5,7
+python run_response.py --output_dir "/data/shared/yanbin/science_physics_responses" --model_name  "o1-preview"  --path "/data/shared/yanbin/science_physics_v1.jsonl" --tensor_parallel_size 2

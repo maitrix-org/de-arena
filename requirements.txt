@@ -1,0 +1,11 @@
+torch
+fire
+transformers
+vllm
+tokencost
+--extra-index-url https://flashinfer.ai/whl/cu121/torch2.3
+flashinfer
+anthropic
+google.generativeai
+mistralai
+scikit-learn
