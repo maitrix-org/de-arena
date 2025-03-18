@@ -155,6 +155,9 @@ def run_openai_model(openai_api, prompts, model_name, max_tokens=15):
     elif "gpt-4o-mini" in model_name:
         model_name = "gpt-4o-mini-2024-07-18"
         client = OpenAI(api_key=openai_api)
+    elif "gpt-4-turbo-2024-04-09" in model_name:
+        model_name = "gpt-4-turbo-2024-04-09"
+        client = OpenAI(api_key=openai_api)
     elif "gpt-4o-2024-05-13" in model_name:
         model_name = "gpt-4o-2024-05-13"
         client = OpenAI(api_key=openai_api)
@@ -535,7 +538,7 @@ def full_comparsion(base_dir, new_model, base_model_list, sort_rank, model_weigh
         for key,value in result[i][1].items():
             battle_id = len(bottle_judge_dict)
             bottle_judge_dict[battle_id] = value
-    print(final_comparison_matrix)
+    # print(final_comparison_matrix)
     # 计算每一行的和
     row_sums = final_comparison_matrix.sum(axis=1, keepdims=True)
 
@@ -593,7 +596,7 @@ def bubble_window(base_dir, new_model, base_model_list, new_model_rank, model_we
         for key,value in result[i][1].items():
             battle_id = len(bottle_judge_dict)
             bottle_judge_dict[battle_id] = value
-    print(final_comparison_matrix)
+    # print(final_comparison_matrix)
     # 计算每一行的和
     row_sums = final_comparison_matrix.sum(axis=1, keepdims=True)
 
