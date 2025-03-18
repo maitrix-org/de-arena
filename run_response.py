@@ -354,7 +354,7 @@ def run_openai_model(prompts, model_name, client, temperature=0.7, max_tokens=20
     elif "gpt-4o-2024-08-06" in model_name:
         model_name = "gpt-4o-2024-08-06"
     elif "o1-mini" in model_name:
-        model_name = "o1-mini-2024-09-12"
+        model_name = "o1-mini"
         responses = []
         # Modify each prompt to ask the model to evaluate dataset quality
         for prompt in prompts:
@@ -413,7 +413,6 @@ def run_openai_model(prompts, model_name, client, temperature=0.7, max_tokens=20
             responses.append(str(text))
         return responses
     
-    print(responses)  # Debugging output to verify the responses
 
     responses = []
     
@@ -634,21 +633,16 @@ def get_questions(path):
     question_map = {question['question_id']: question['turns'][0] for question in questions}
     return question_map
 
-def run_all_models(output_dir="/data/shared/yanbin/science_biology_v1_final_selected_responses", model_names="vicuna-33b", path='/data/shared/yanbin/science_biology_v1.jsonl', tensor_parallel_size=4, max_tokens=1024, batch_size=100, temperature=0.7, gpu_memory_utilization=0.5, client=None):
+def run_all_models(output_dir="/home/yanbin/De-Arena/mt_bench_responses", model_names="vicuna-33b", path='/home/yanbin/De-Arena/mt_bench_questions.jsonl', openai_api='111' ,tensor_parallel_size=4, max_tokens=1024, batch_size=100, temperature=0.7, gpu_memory_utilization=0.5, client=None):
     print(output_dir,model_names,path,tensor_parallel_size)
-    start_time = time.time()
     question_map = get_questions(path)
     prompts = list(question_map.values())
     question_ids = list(question_map.keys())
-    # biology
-    question_ids = [376, 286, 347, 440, 145, 464, 16, 95, 362, 487, 402, 165, 46, 71, 267, 171, 91, 169, 239, 409, 137, 350, 358, 316, 255, 300, 144, 127, 240, 206, 22, 401, 133, 102, 490, 471, 280, 434, 58, 277, 56, 472, 306, 104, 265, 379, 15, 408, 69, 353, 81, 290, 213, 325, 312, 289, 254, 178, 450, 368, 332, 210, 187, 130, 86, 77, 357, 53, 411, 194, 142, 27, 149, 297, 79, 50, 134, 264, 320, 459, 496, 340, 88, 361, 313, 63, 241, 26, 13, 25, 273, 191, 183, 159, 469, 360, 139, 47, 429, 470]
-    # physics
-    question_ids = [71, 424, 38, 23, 473, 250, 180, 29, 258, 185, 498, 404, 412, 192, 60, 220, 262, 142, 353, 291, 349, 162, 68, 407, 121, 7, 434, 45, 155, 418, 491, 144, 352, 276, 177, 280, 490, 257, 339, 255, 385, 188, 275, 312, 227, 37, 492, 310, 131, 433, 495, 86, 201, 223, 461, 442, 454, 445, 198, 145, 242, 277, 14, 435, 497, 452, 319, 459, 150, 455, 211, 463, 350, 115, 496, 426, 469, 49, 477, 278, 108, 190, 415, 69, 181, 129, 237, 9, 264, 19, 314, 286, 325, 348, 261, 428, 440, 478, 67, 110]
-    
-    question_ids = sorted(question_ids)
-    print(question_ids)
-    model_names = model_names.split(',')
 
+    # print(question_ids)
+    model_names = model_names.split(',')
+    print(model_names)
+    print(openai_api)
 
     # 根据给定的 question_ids 索引 prompt
     prompts = [question_map[qid] for qid in question_ids if qid in question_map]
@@ -656,6 +650,7 @@ def run_all_models(output_dir="/data/shared/yanbin/science_biology_v1_final_sele
     os.makedirs(output_dir, exist_ok=True)
 
     for model_name in tqdm(model_names):
+        start_time = time.time()
         final_responses = dict()
         print(f"Processing model: {model_name}")
         if "gpt" in model_name.lower() or "o1-" in model_name.lower():
@@ -745,10 +740,11 @@ if __name__ == "__main__":
     parser.add_argument('--output_dir', type=str, default="mt_bench_responses", help='Output directory')
     parser.add_argument('--model_names', type=str, default="vicuna-33b", help='Comma-separated list of model names')
     parser.add_argument('--path', type=str, default='mt_bench_questions.jsonl', help='Path to the input file')
+    parser.add_argument('--openai_api', type=str, default='111', help='API Key')
     parser.add_argument('--tensor_parallel_size', type=int, default=2, help='Tensor parallel size')
     
     args = parser.parse_args()
 
     # print(args)
 
-    fire.Fire(run_all_models(output_dir=args.output_dir, model_names=args.model_names, path=args.path,tensor_parallel_size=args.tensor_parallel_size))
+    fire.Fire(run_all_models(output_dir=args.output_dir, model_names=args.model_names, path=args.path, openai_api=args.openai_api, tensor_parallel_size=args.tensor_parallel_size))
