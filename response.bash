@@ -1,2 +1,2 @@
 export CUDA_VISIBLE_DEVICES=5,7
-python run_response.py --output_dir "/data/shared/yanbin/science_physics_responses" --model_name  "o1-preview"  --path "/data/shared/yanbin/science_physics_v1.jsonl" --tensor_parallel_size 2
+python run_response.py --output_dir "/home/yanbin/De-Arena/mt_bench_responses" --model_name  "o1-mini,o1-preview,ChatGPT-4o-latest,gpt-4o-2024-05-13,gpt-4o-2024-08-06,gpt-4-1106-preview,gpt-4-turbo-2024-04-09,gpt-3.5-turbo-0125,gpt-4o-mini-2024-07-18"  --path "/home/yanbin/De-Arena/mt_bench_questions.jsonl" --openai_api "" --tensor_parallel_size 2
