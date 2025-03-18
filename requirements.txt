@@ -9,3 +9,5 @@ anthropic
 google.generativeai
 mistralai
 scikit-learn
+zhipuai
+pandas
