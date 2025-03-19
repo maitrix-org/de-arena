@@ -26,7 +26,9 @@
 ## Pipeline
 ### API Example
 - 1. bash response.bash
+     
   Parameter List:
+  
     - model_name: A list representing the models you want to rank.
     - output_dir: The path where the models' responses are saved.
     - path: The path to the question set..
