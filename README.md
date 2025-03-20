@@ -19,9 +19,15 @@
 
 **Decentralized Arena**  is a fully automated framework leveraging collective intelligence from all LLMs to evaluate each other. It provides:
 
-- **coarse-to-fine ranking algorithm**
+- **Robust, unbiased:** Decentralization avoids bias due to a single or a small committee of judge models, and is less gameable by overfitting the judge models. The more LLMs that participate in the arena, the more robust the evaluation becomes! Moreover, Decentralized Arena archives a very high correlation (97%) with Chatbot Arena on 60+ models 
 
-- **automatic question selection strategy**
+- **Automatic, easily scalable, and customizable to any evaluation dimensions:** While Chatbot Arena is limited to evaluating a few dimensions due to the limited number of meaningful user votes it can gather, Decentralized Arena is fully automatic and can scale to an infinite number of dimensions. We also provide guidelines of automatically selecting dimension-specific queries for customized evaluation
+  
+- **Fast, instant ranking of new models:** Thanks to the automation and the efficient *binary-search* ranking algorithm, we can instantly get the evaluation results of a new model, without needing to wait for weeks to gather user votes.
+
+- **Transparent, fully reproducible:** All algorithms, implementations, and inputs/outputs will be made open, making the results fully reproducible.
+
+- **Trustworthy:** Ultimately, with its robustness, strong alignment with existing human evaluation results, fine-grained dimensional analysis, and transparency, Decentralized Arena aims to provide a benchmark the community can trust.
 
 ## News
 - Dec. 31, 2024: We added style control.
