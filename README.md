@@ -24,10 +24,7 @@
 - **automatic question selection strategy**
 
 ## News
-- Jan. 30, 2025: We submitted our paper to ICML 2025! 
-
 - Dec. 31, 2024: We added style control.
-- Oct. 22, 2024: We added three new models to our De-Arena. They are Llama-3.1-Nemotron-70B, Yi-lightning, GLM-4-plus.
 - Oct. 10, 2024: We presented our De-Arena [Blog](https://de-arena.maitrix.org) & [LeaderBoard](https://huggingface.co/spaces/LLM360/de-arena), a fully automated framework leveraging collective intelligence from all LLMs to evaluate each other.
 
 ## Introduction of the library
