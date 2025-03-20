@@ -36,15 +36,64 @@ from relying on a single or a small number of judge models. To achieve it, we de
 
 ## Pipeline
 ### API Example
+This example provides the ranking of nine OpenAI API models. The results from the first step have already been stored in **"mt_bench_responses"**, and some results from the second step have also been stored in **"judgements_mt_bench"**. 
+
 - 1. bash response.bash
      
   Parameter List:
   
     - model_name: A list representing the models you want to rank.
     - output_dir: The path where the models' responses are saved.
-    - path: The path to the question set..
+    - path: The path to the question set.
     - openai_api: Your OpenAI API key.
-2. python autimatic_arena.py
+
+- 2. bash ranking.bash
+     
+  Parameter List:
+  
+    - openai_api: Your OpenAI API key.
+    - overall ids: Your question id.
+    - save_output_file_path: The path where your judge pairs are saved.
+    - judge_open_model: Your open source judge model list.
+    - judge_api_model: Your API judge model list.
+    - base_model_list: Your base model list.
+    - sort_model_list: A list representing the models you want to rank.
+
+### Open Source Example
+This example provides the ranking of nine OpenAI API models. The results from the first step have already been stored in **"mt_bench_responses"**, and results from the second step have also been stored in **"judgements_mt_bench"**. 
+
+- 1. bash response.bash
+     
+  Parameter List:
+  
+    - model_name: A list representing the models you want to rank.
+    - output_dir: The path where the models' responses are saved.
+    - path: The path to the question set.
+    - openai_api: Your OpenAI API key.
+
+- 2. bash judge.bash
+
+  In this process, to accelerate the evaluation, we first obtain the full sample judge results for each open-source model using this script. The duration of this process depends on the number of GPUs available. However, make sure to modify the **`model_name`** parameter and run this script for all open-source models.
+
+  Parameter List:
+  
+    - model_name: The model you run the judgements.
+    - model_names: A list representing the models you want to rank.
+    - path: The path to the question set.
+    - q_set: The dimension you are running.
+
+- 3. bash ranking.bash
+     
+  Parameter List:
+  
+    - openai_api: Your OpenAI API key. (no need in this example)
+    - overall ids: Your question id.
+    - save_output_file_path: The path where your judge pairs are saved.
+    - judge_open_model: Your open source judge model list.
+    - judge_api_model: Your API judge model list.
+    - base_model_list: Your base model list.
+    - sort_model_list: A list representing the models you want to rank.
+
 
 ## Installation
 
