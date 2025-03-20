@@ -25,8 +25,6 @@ from decimal import Decimal
 import sys
 import copy
 import itertools
-import google.generativeai as genai
-import time
 total_completion_cost = 0
 total_prompt_cost = 0
 
@@ -39,17 +37,12 @@ def load_records(filename):
     with open(filename, 'r') as file:
         return [json.loads(line.strip()) for line in file]
 
-# Function to save judgment data into a JSONL file
-def save_judgement(judge_name, data):
-    """Save judgement data to a JSONL file."""
-    path = f"judgements_mt_bench/{judge_name}/judgements_new.jsonl"
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'a') as f:
-        f.write(json.dumps(data) + '\n')
-
-def update_voting_records(model, response_A_name, response_B_name, won, question_id, data_id):
+def update_voting_records(model, response_A_name, response_B_name, won, question_id, data_id, dimension, split=0):
     """Updates the voting records with a new voting result."""
-    records_path = f"judgements_mt_bench/{model}/voting_records_new.jsonl"
+    if split!=0:
+        records_path = f"judgements_{dimension}/{model}/voting_records_{split}.jsonl"
+    else:
+        records_path = f"judgements_{dimension}/{model}/voting_records.jsonl"
 
     # Ensure the directory exists
     os.makedirs(os.path.dirname(records_path), exist_ok=True)
@@ -92,7 +85,7 @@ def format_prompt(model_name, prompt, tokenizer=None):
 def run_hf_model(prompts, judge_name, tokenizer, engine, temperature=0.7, max_tokens=15):
     # Set the max tokens based on the judge name
     if judge_name == "athene-70b" or judge_name == "gemma-2-2b-it" or judge_name == "gemma-1.1-2b-it" or judge_name == "llama2-13b-chat" or judge_name == "gemma-1.1-7b-it":
-        max_new_tokens = 64
+        max_new_tokens = 16
     else:
         max_new_tokens = 15
     if judge_name == "koala-13b" or judge_name == "openassistant-pythia-12b":
@@ -106,7 +99,7 @@ def run_hf_model(prompts, judge_name, tokenizer, engine, temperature=0.7, max_to
     return responses
 
 # Function to run OpenAI models
-def run_openai_model(prompts, model_name, client, temperature=0.7, max_tokens=5):
+def run_openai_model(prompts, model_name, client, temperature=0.7, max_tokens=15):
     # Handle model selection for OpenAI models
     if "3.5-turbo-0125" in model_name: 
         model_name = "gpt-3.5-turbo-0125"
@@ -184,45 +177,7 @@ def run_openai_model(prompts, model_name, client, temperature=0.7, max_tokens=5)
     
     return responses
 
-def run_gemini_model(prompts, client, model_name="gemini-1.5-flash", max_tokens=3):
-    if model_name=="gemini-1.5-flash-exp-0827":
-        model_name="gemini-1.5-flash-exp-0827"
-    elif model_name=="gemini-1.5-flash-8b-exp-0827":
-        model_name="gemini-1.5-flash-8b-exp-0827"
-    elif model_name=="gemini-1.5-pro-exp-0827":
-        model_name="gemini-1.5-pro-exp-0827"
-    elif model_name=="gemini-1.5-pro-001":
-        model_name="gemini-1.5-pro-001"
-    elif model_name=="gemini-1.0-pro-001":
-        model_name="gemini-1.0-pro-001"
-    elif model_name == "gemini-1.5-flash-001":
-        model_name="gemini-1.5-flash-001"
-
-    responses = []
-    genai.configure(api_key=client)
-    model = genai.GenerativeModel(model_name)
-    for prompt in prompts:
-        cnt = 0
-        while 1:
-            cnt += 1
-            if cnt > 5:
-                responses.append("")
-                break
-            try:
-                message = model.generate_content(
-                    prompt
-                )
-                response_text = message.text
-                responses.append(response_text)
-                break
-            except Exception as e:
-                    print(f"Error : {e}")
-                    time.sleep(5)
-                    continue 
-    
-    return responses
-
-def run_claude_model(prompts, client, model_name="claude-3-opus", max_tokens=5):
+def run_claude_model(prompts, client, model_name="claude-3-opus", max_tokens=2048):
     if model_name=="claude-3.5-sonnet":
         model_name="claude-3-5-sonnet-20240620"
     elif model_name=="claude-3-opus":
@@ -240,27 +195,15 @@ def run_claude_model(prompts, client, model_name="claude-3-opus", max_tokens=5):
     responses = []
     
     for prompt in prompts:
-        cnt = 0
-        while 1:
-            cnt += 1
-            if cnt > 3:
-                responses.append("")
-                break
-            try:
-                message = client.messages.create(
-                    model=model_name,
-                    max_tokens=max_tokens,
-                    messages=[
-                        {"role": "user", "content": prompt}
-                    ]
-                )
-                response_text = ''.join([block.text for block in message.content])
-                responses.append(response_text)
-                break
-            except Exception as e:
-                    print(f"Error : {e}")
-                    time.sleep(5)
-                    continue 
+        message = client.messages.create(
+            model=model_name,
+            max_tokens=max_tokens,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        response_text = ''.join([block.text for block in message.content])
+        responses.append(response_text)
     
     return responses
 
@@ -283,7 +226,7 @@ def load_model(model_name,tensor_parallel_size, enforce_eager=True):
 
     # Set attention backend for specific models
     if "gemma-2" in model_name.lower():
-        os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
+        os.environ["VLLM_ATTENTION_BACKEND"] = "FLASH_ATTN"
 
     ## Load other API models
 
@@ -318,16 +261,6 @@ def get_question_with_reference(path, prompt_id):
         if question['question_id'] == prompt_id:
             return question['turns'][0], question.get('reference', [""])[0]
     return None, ""
-
-# def get_question_with_reference(path, prompt_id):
-#     questions = load_jsonl(path)
-#     for question in questions:
-#         if question['question_id'] == prompt_id:
-#             if len(question['reference']) == 0:
-#                 return question['turns'][0], ""
-#             else:
-#                 return question['turns'][0], question.get('reference', [""])[0]
-#     return None, ""
 
 # Function to fetch responses for a given model from a JSONL file
 def fetch_responses(path,model):
@@ -392,99 +325,78 @@ def determine_winner(judge_response, model_a, model_b):
             winner = "Tie"
     return winner
 
-# Function to save the cost estimation to a JSONL file
-def save_cost_estimation(judge_name, cost):
-    """Save judgement cost to a JSONL file."""
-    path = f"judgement_cost/{judge_name}/cost.jsonl"
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    
-    # Convert Decimal to float for any Decimal entries in the cost dictionary
-    for key in cost:
-        if isinstance(cost[key], Decimal):
-            cost[key] = float(cost[key])
-            
-    with open(path, 'a') as f:
-        f.write(json.dumps(cost) + '\n')
-
-# Function to save time estimation data into a JSONL file
-def save_time_estimation(judge_name, cost):
-    """Save judgement time usage to a JSONL file."""
-    path = f"judgement_time/{judge_name}/time.jsonl"
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    
-    # Convert Decimal to float for any Decimal entries in the cost dictionary
-    for key in cost:
-        if isinstance(cost[key], Decimal):
-            cost[key] = float(cost[key])
-            
-    with open(path, 'a') as f:
-        f.write(json.dumps(cost) + '\n')
-
-# Function to load voting records
-def load_voting_records(records_path):
-    """Load existing voting records from a JSONL file."""
-    if os.path.exists(records_path):
-        with open(records_path, 'r') as file:
-            # Here we load the entire file content as a list of records
-            records = json.load(file)  # This assumes that the JSONL file is actually a JSON array in one line
+def resume_check(combination_models, initial_question_ids, model, dimension, split=0):
+    """Updates the voting records with a new voting result."""
+    if split != 0:
+        records_path = f"judgements_{dimension}/{model}/voting_records_{split}.jsonl"
     else:
-        records = []
-    return records
+        records_path = f"judgements_{dimension}/{model}/voting_records.jsonl"
 
+    if os.path.exists(records_path):
+        try:
+            records = load_records(records_path)[0]
+        except:
+            records = []
+        pair2count = {}
+        for record in records:
+            pair = (record["response_A"], record["response_B"])
+            pair2count[pair] = pair2count.get(pair, 0) + 1
+        new_combination_models = []
+        for res_A, res_B in combination_models:
+            pair = (res_A, res_B)
+            if pair2count.get(pair, 0) < len(initial_question_ids):
+                new_combination_models.append(pair)
+        return new_combination_models
+    else:
+        return combination_models
 
 # Main function to run the judging trials, handling multiple models
-def run_judging_trials(path="mt_bench_questions.jsonl",model_name="command-r-v01",tensor_parallel_size=1):
-    print(path,model_name,tensor_parallel_size)
+def run_judging_trials(path="math_questions.jsonl", model_name="command-r-v01", model_names="", tensor_parallel_size=1, dimension="math_algebra", split=0):
+    print(path, model_name, model_names, dimension)
     global total_completion_cost, total_prompt_cost
-    model_names = list(existing_model_paths.keys())
+    model_names = model_names.split(',')
+    print(model_names)
 
     start_time = time.time()
-    model_index_map = {name: idx for idx, name in enumerate(model_names)}
-    initial_question_ids = list(range(81,161))
+    initial_question_ids = list(range(81, 102)) + list(range(103, 121))
 
     responses_dict = dict()
     # Fetch responses for each model
     for model in model_names:
-        responses_dict[model] = fetch_responses("mt_bench_responses",model)
+        responses_dict[model] = fetch_responses(f"{dimension}_responses", model)
 
     # Select specific models for the judging trials
     for model in [model_name]:
         pair_models = copy.deepcopy(model_names)
         pair_models.remove(model)
         combination_models = list(itertools.combinations(pair_models, 2))
-        tokenizer, judge_model = load_model(model,tensor_parallel_size)
+        if split==1:
+            c_len = len(combination_models) // 2
+            combination_models = combination_models[:c_len]
+        elif split==2:
+            c_len = len(combination_models) // 2
+            combination_models = combination_models[c_len:]
+
+        new_combination_models = resume_check(combination_models, initial_question_ids, model_name, dimension, split)
+        print(f"After Resume Check, {len(combination_models)} pairs are reduced into {len(new_combination_models)} pairs.")
+        combination_models = new_combination_models
+
+        tokenizer, judge_model = load_model(model, tensor_parallel_size)
         client = None
         print(judge_model)
-        # 加载已有的投票记录
-        records_path = f"judgements_mt_bench/{model}/voting_records_new.jsonl"
-        existing_records = load_voting_records(records_path)
-
-        # 创建一个集合用于快速查找已存在的模型对
-        existing_model_pairs = set()
-        for record in existing_records:
-            pair = tuple(sorted([record['response_A'], record['response_B']]))
-            existing_model_pairs.add(pair)
         if judge_model == "OPENAI":
-            client = OpenAI(api_key="")
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         if judge_model == "Anthropic":
-            api_key = ''
+            api_key = os.getenv("ANTHROPIC_API_KEY")
             client = anthropic.Anthropic(api_key=api_key)
-        if judge_model == "gemini":
-            api_key = ""
-            client = api_key
-        NUMBER=len(combination_models)
-        SCALE=int(NUMBER/3)
+        
         # Iterate over combinations of model pairs for comparison
-        for model_a,model_b in tqdm(combination_models[27:]):
-            pair = tuple(sorted([model_a, model_b]))
-            if pair in existing_model_pairs:
-                print(f"Skipping existing model pair: {model_a} vs {model_b}")
-                continue  # 跳过已有的模型对
+        for model_a,model_b in tqdm(combination_models):
             responses_a = responses_dict[model_a]
             responses_b = responses_dict[model_b]
             print(model_a,model_b)
 
-            batch_size = 80  # Set batch size for processing
+            batch_size = 40  # Set batch size for processing
             num_batches = (len(initial_question_ids) + batch_size - 1) // batch_size  # Calculate the number of batches
 
             for batch_idx in tqdm(range(num_batches)):
@@ -497,7 +409,7 @@ def run_judging_trials(path="mt_bench_questions.jsonl",model_name="command-r-v01
                 # Create prompts and swapped prompts for comparison
                 for idx in range(start_idx, end_idx):
                     question_id = initial_question_ids[idx]
-                    question,reference = get_question_with_reference(path,question_id)
+                    question, reference = get_question_with_reference(path, question_id)
                     response_a = responses_a[idx]['response']
                     response_b = responses_b[idx]['response']
                     if reference !="":
@@ -519,15 +431,9 @@ def run_judging_trials(path="mt_bench_questions.jsonl",model_name="command-r-v01
                         # Placeholder for Anthropic, no operation for now
                         judge_responses = run_claude_model(prompts, client, model_name)
                         swapped_judge_responses = run_claude_model(swapped_prompts, client, model_name)
-                    elif judge_model == "gemini":  # For Anthropic models (e.g., Claude)
-                        # Placeholder for Anthropic, no operation for now
-                        judge_responses = run_gemini_model(prompts, client, model_name)
-                        swapped_judge_responses = run_gemini_model(swapped_prompts, client, model_name)
                     else:  # For other HuggingFace (HF) models
                         judge_responses = run_hf_model(prompts, model, tokenizer, judge_model)
                         swapped_judge_responses = run_hf_model(swapped_prompts, model, tokenizer, judge_model)
-                    print(judge_responses)
-                    print(swapped_judge_responses)
                 except Exception as e:
                     print(f"Error evaluating model pair ({model_a}, {model_b}) with judge {model}: {e}")
                     continue  # Skip to the next model pair if there's an error
@@ -539,39 +445,21 @@ def run_judging_trials(path="mt_bench_questions.jsonl",model_name="command-r-v01
                     swapped_winner = determine_winner(swapped_response, model_b, model_a)
                     final_winner = winner if winner == swapped_winner else "TIE"
                     data_id = str(uuid.uuid4())
-                    update_voting_records(model, model_a, model_b, final_winner, question_ids[cnt], data_id)
+                    update_voting_records(model, model_a, model_b, final_winner, question_ids[cnt], data_id, dimension, split)
 
-                    judgement_data = {
-                                'data_id': data_id,
-                                'question_id': question_ids[cnt],
-                                'model_A': model_a,
-                                'model_B': model_b,
-                                'prompt': prompts[cnt],
-                                'judge_response': response
-                            }
-                    save_judgement(model, judgement_data)
-                    cnt+=1
 
         end_time = time.time()
         duration = end_time - start_time
-        cost_data = {
-                        'judge_name': model,
-                        'completion_cost': total_completion_cost,
-                        'prompt_cost': total_prompt_cost,
-                        'total_cost': total_completion_cost + total_prompt_cost,
-                        'duration': duration
-                    }
-        save_time_estimation(model, cost_data)  # Save the time estimation
-        save_cost_estimation(model, cost_data)  # Save the cost estimation
-        # break
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run all models with specified parameters.')
     
-    parser.add_argument('--path', type=str, default='mt_bench_questions.jsonl', help='Path to the input file')
+    parser.add_argument('--path', type=str, default='math_questions.jsonl', help='Path to the input file')
     parser.add_argument('--model_name', type=str, default="vicuna-33b", help='Comma-separated list of model names')
+    parser.add_argument('--dimension', type=str, default="math_algebra", help='new dimension names')
     parser.add_argument('--tensor_parallel_size', type=int, default=2, help='Tensor parallel size')
+    parser.add_argument('--model_names', type=str, default="vicuna-33b", help='Comma-separated list of model names')
     
     args = parser.parse_args()
 
-    fire.Fire(run_judging_trials(path=args.path, model_name=args.model_name,tensor_parallel_size=args.tensor_parallel_size))
+    fire.Fire(run_judging_trials(path=args.path, model_name=args.model_name, model_names=args.model_names, tensor_parallel_size=args.tensor_parallel_size, dimension=args.dimension))

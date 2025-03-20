@@ -24,23 +24,37 @@ import sys
 import google.generativeai as genai
 import time
 import re
-from judge_responses_new import get_question_with_reference, judge_prompt_pair_reference, judge_prompt_pairwise, \
+from judge_responses import get_question_with_reference, judge_prompt_pair_reference, judge_prompt_pairwise, \
     fetch_responses, determine_winner, load_records
 from sklearn.linear_model import LogisticRegression
 import pandas as pd
 import math
  
-# 假设df是你的DataFrame
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 pd.set_option('display.max_colwidth', None)
 
-judge_open_model = []
-judge_api_model = ['o1-mini', 'o1-preview', 'ChatGPT-4o-latest', 'gpt-4o-2024-05-13', 'gpt-4o-2024-08-06', 'gpt-4-1106-preview', 'gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'gpt-4o-mini-2024-07-18']
-judge_model_list = ['o1-mini', 'o1-preview', 'ChatGPT-4o-latest', 'gpt-4o-2024-05-13', 'gpt-4o-2024-08-06', 'gpt-4-1106-preview', 'gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'gpt-4o-mini-2024-07-18']
-overall_ids = [i for i in range(81,102)]+[i for i in range(103,121)]
-save_output_file_path = 'mt_bench ranking result.txt'
+# 读取环境变量
+openai_api = os.getenv("OPENAI_API", "")
+overall_ids = list(range(81, 102)) + list(range(103, 121))
+save_output_file_path = os.getenv("SAVE_OUTPUT_FILE_PATH", "mt_bench ranking result.txt")
+
+judge_open_model = os.getenv("JUDGE_OPEN_MODEL", "").split(",") if os.getenv("JUDGE_OPEN_MODEL") else []
+judge_api_model = os.getenv("JUDGE_API_MODEL", "").split(",") if os.getenv("JUDGE_API_MODEL") else []
+judge_model_list = judge_api_model + judge_open_model
+base_model_list = os.getenv("BASE_MODEL_LIST", "").split(",")
+sort_model_list = os.getenv("SORT_MODEL_LIST", "").split(",")
+
+# 打印变量以检查是否正确传递
+print(f"OpenAI API: {openai_api}")
+print(f"Overall IDs: {overall_ids}")
+print(f"Save Output File Path: {save_output_file_path}")
+print(f"Judge Open Model: {judge_open_model}")
+print(f"Judge API Model: {judge_api_model}")
+print(f"Judge Model List: {judge_model_list}")
+print(f"Base Model List: {base_model_list}")
+print(f"Sort Model List: {sort_model_list}")
 
 def rank_scores(scores):
     indexed_scores = list(enumerate(scores))
@@ -57,7 +71,7 @@ def save_to_jsonl(data, filename):
 
 def update_voting_records(model, response_A_name, response_B_name, won, question_id, data_id):
     """Updates the voting records with a new voting result."""
-    records_path = f"/home/yanbin/De-Arena/judgements_mt_bench/{model}/voting_records.jsonl"
+    records_path = f"judgements_mt_bench/{model}/voting_records.jsonl"
     # Ensure the directory exists
     os.makedirs(os.path.dirname(records_path), exist_ok=True)
 
@@ -80,14 +94,15 @@ def update_voting_records(model, response_A_name, response_B_name, won, question
     # Save updated records back to the JSONL file
     save_to_jsonl(records, records_path)
 
-def run_judging_trials(judge_model, model_name, path="/home/yanbin/De-Arena/mt_bench_questions.jsonl", openai_api = "", tensor_parallel_size=1):
+def run_judging_trials(judge_model, model_name, path="mt_bench_questions.jsonl", tensor_parallel_size=1):
     # print(judge_model,model_name)
+    global openai_api
     model_index_map = {name: idx for idx, name in enumerate(model_name)}
     initial_question_ids = overall_ids
     responses_dict = dict()
     # Fetch responses for each model
     for model in model_name:
-        responses_dict[model] = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model)
+        responses_dict[model] = fetch_responses("mt_bench_responses", model)
     # print(responses_dict)
     combination_models = list(itertools.combinations(model_name, 2))
 
@@ -148,6 +163,7 @@ def run_judging_trials(judge_model, model_name, path="/home/yanbin/De-Arena/mt_b
                 cnt += 1
 
 def run_openai_model(openai_api, prompts, model_name, max_tokens=15):
+    print(openai_api)
     # Handle model selection for OpenAI models
     if "3.5-turbo-0125" in model_name:
         model_name = "gpt-3.5-turbo-0125"
@@ -290,11 +306,13 @@ def get_vote_result_for_judge(base_dir, judge_model, model1, model2, valid_quest
     vote_diff = 0
     jsonl_path = os.path.join(base_dir, judge_model, "voting_records.jsonl")
     if judge_model in judge_open_model:
-        jsonl_path = os.path.join(base_dir, judge_model, "voting_records.jsonl")
-        os.makedirs(os.path.join(base_dir, subdir), exist_ok=True)
         if not os.path.exists(jsonl_path):
-            with open(jsonl_path, 'w') as file:
-                pass  
+            directory = os.path.join(base_dir, judge_model)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            if not os.path.exists(jsonl_path):
+                with open(jsonl_path, 'w') as f:
+                    pass
         if os.path.exists(jsonl_path):
             with open(jsonl_path, 'r') as file:
                 for line in file:
@@ -305,8 +323,8 @@ def get_vote_result_for_judge(base_dir, judge_model, model1, model2, valid_quest
                             continue
                         if each['response_A'] == model1 and each['response_B'] == model2:
                             battle_id = len(tmp_judge_dict)
-                            response_A = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model1)
-                            response_B = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model2)
+                            response_A = fetch_responses("mt_bench_responses", model1)
+                            response_B = fetch_responses("mt_bench_responses", model2)
                             # print(response_A)
                             question_id = each.get('question_id')
                             response_a = next((item['response'] for item in response_A if item['question_id'] == question_id), None)
@@ -324,8 +342,8 @@ def get_vote_result_for_judge(base_dir, judge_model, model1, model2, valid_quest
                                 vote_diff -= 1
                         elif each['response_A'] == model2 and each['response_B'] == model1:
                             battle_id = len(tmp_judge_dict)
-                            response_A = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model1)
-                            response_B = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model2)
+                            response_A = fetch_responses("mt_bench_responses", model1)
+                            response_B = fetch_responses("mt_bench_responses", model2)
                             # print(response_A)
                             question_id = each.get('question_id')
                             response_a = next((item['response'] for item in response_A if item['question_id'] == question_id), None)
@@ -365,8 +383,8 @@ def get_vote_result_for_judge(base_dir, judge_model, model1, model2, valid_quest
                         if each['response_A'] == model1 and each['response_B'] == model2:
                             flag = True
                             battle_id = len(tmp_judge_dict)
-                            response_A = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model1)
-                            response_B = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model2)
+                            response_A = fetch_responses("mt_bench_responses", model1)
+                            response_B = fetch_responses("mt_bench_responses", model2)
                             # print(response_A)
                             question_id = each.get('question_id')
                             response_a = next((item['response'] for item in response_A if item['question_id'] == question_id), None)
@@ -386,8 +404,8 @@ def get_vote_result_for_judge(base_dir, judge_model, model1, model2, valid_quest
                             flag = True
                             # print(each)
                             battle_id = len(tmp_judge_dict)
-                            response_A = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model1)
-                            response_B = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model2)
+                            response_A = fetch_responses("mt_bench_responses", model1)
+                            response_B = fetch_responses("mt_bench_responses", model2)
                             # print(response_A)
                             question_id = each.get('question_id')
                             response_a = next((item['response'] for item in response_A if item['question_id'] == question_id), None)
@@ -403,7 +421,6 @@ def get_vote_result_for_judge(base_dir, judge_model, model1, model2, valid_quest
                             elif each['Won'] == model1:
                                 vote_diff += 1
             # print(vote_diff)
-            # 调用API
             if flag == False:
                 with open(jsonl_path, 'r') as file:
                     # print(judge_model)
@@ -419,8 +436,8 @@ def get_vote_result_for_judge(base_dir, judge_model, model1, model2, valid_quest
                                 if each['response_A'] == model1 and each['response_B'] == model2:
                                     flag = True
                                     battle_id = len(tmp_judge_dict)
-                                    response_A = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model1)
-                                    response_B = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model2)
+                                    response_A = fetch_responses("mt_bench_responses", model1)
+                                    response_B = fetch_responses("mt_bench_responses", model2)
                                     # print(response_A)
                                     question_id = each.get('question_id')
                                     response_a = next((item['response'] for item in response_A if item['question_id'] == question_id), None)
@@ -440,8 +457,8 @@ def get_vote_result_for_judge(base_dir, judge_model, model1, model2, valid_quest
                                     flag = True
                                     # print(each)
                                     battle_id = len(tmp_judge_dict)
-                                    response_A = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model1)
-                                    response_B = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model2)
+                                    response_A = fetch_responses("mt_bench_responses", model1)
+                                    response_B = fetch_responses("mt_bench_responses", model2)
                                     # print(response_A)
                                     question_id = each.get('question_id')
                                     response_a = next((item['response'] for item in response_A if item['question_id'] == question_id), None)
@@ -637,8 +654,8 @@ def pairwise_judge(base_dir, subdir, model_weights, sort_model_index_map, judge_
 
                         if idx1 is not None and idx2 is not None and judge_idx is not None:
                             battle_id = len(tmp_judge_dict)
-                            response_A = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model1)
-                            response_B = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model2)
+                            response_A = fetch_responses("mt_bench_responses", model1)
+                            response_B = fetch_responses("mt_bench_responses", model2)
                             question_id = each.get('question_id')
                             response_a = next((item['response'] for item in response_A if item['question_id'] == question_id), None)
                             response_b = next((item['response'] for item in response_B if item['question_id'] == question_id), None)
@@ -683,8 +700,8 @@ def pairwise_judge(base_dir, subdir, model_weights, sort_model_index_map, judge_
                             remaining_combinations.discard((model1, model2))
                             remaining_combinations.discard((model2, model1))
                             battle_id = len(tmp_judge_dict)
-                            response_A = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model1)
-                            response_B = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model2)
+                            response_A = fetch_responses("mt_bench_responses", model1)
+                            response_B = fetch_responses("mt_bench_responses", model2)
                             # print(response_A)
                             question_id = each.get('question_id')
                             response_a = next((item['response'] for item in response_A if item['question_id'] == question_id), None)
@@ -727,8 +744,8 @@ def pairwise_judge(base_dir, subdir, model_weights, sort_model_index_map, judge_
                                 if idx1 is not None and idx2 is not None and judge_idx is not None:
                                     flag = True
                                     battle_id = len(tmp_judge_dict)
-                                    response_A = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model1)
-                                    response_B = fetch_responses("/home/yanbin/De-Arena/mt_bench_responses", model2)
+                                    response_A = fetch_responses("mt_bench_responses", model1)
+                                    response_B = fetch_responses("mt_bench_responses", model2)
                                     # print(response_A)
                                     question_id = each.get('question_id')
                                     response_a = next((item['response'] for item in response_A if item['question_id'] == question_id), None)
@@ -766,9 +783,6 @@ def vote_to_rank(vote_matrix, weights, n):
         # print(ranking)
     return vote_sum, ranking
 
-def update_model_weight(initial_weight, base_model_ranking, judge_model_list):
-    return model_scores
-
 def update_bubble_window_rank(base_model_ranking, model_names, new_model_rank, ranking):
     base_model_ranking[model_names[0]] = new_model_rank + ranking[0] - 1
     base_model_ranking[model_names[1]] = new_model_rank + ranking[1] - 1
@@ -803,56 +817,6 @@ def judge_continue_bubble(old_model_rank, new_model_rank, model_num):
     if new_model_rank > old_model_rank:
         return -1
     return flag_bubble
-
-def get_final_avg_rank(final_model_list):
-    # 用于存储模型排名信息的字典
-    ranking_stats = {}
-    # 遍历每种方法的排名
-    for method_rank in final_model_list:
-        for rank, model in enumerate(method_rank):
-            if model not in ranking_stats:
-                ranking_stats[model] = {
-                    'total_rank': 0,
-                    'count': 0,
-                    'min_rank': float('inf'),
-                    'max_rank': float('-inf')
-                }
-
-            # 更新总排名和计数（rank + 1 使其为 1-based ranking）
-            ranking_stats[model]['total_rank'] += rank + 1
-            ranking_stats[model]['count'] += 1
-
-            # 更新最低和最高排名
-            ranking_stats[model]['min_rank'] = min(ranking_stats[model]['min_rank'], rank + 1)
-            ranking_stats[model]['max_rank'] = max(ranking_stats[model]['max_rank'], rank + 1)
-    print(ranking_stats)
-    # 计算平均排名并准备最终结果
-    final_results = {}
-    for model, stats in ranking_stats.items():
-        average_rank = stats['total_rank'] / stats['count']
-        final_results[model] = average_rank
-    print(final_results)
-    # 根据平均排名排序
-    sorted_models = sorted(final_results.items(), key=lambda x: x[1])
-    print(sorted_models)
-    # 处理并列情况生成最终排名
-    final_ranked_list = []
-    last_rank = 0
-    last_average = None
-    for index, (model, average_rank) in enumerate(sorted_models):
-        if last_average is not None and average_rank == last_average:
-            final_ranked_list.append(last_rank)  # 并列情况，保持上一个排名
-        else:
-            last_rank = index + 1  # 1-based ranking
-            final_ranked_list.append(last_rank)
-        last_average = average_rank
-    # 输出结果
-    print("最终模型排名列表:", final_ranked_list)
-    with open(save_output_file_path, 'a') as f:
-        f.write(f"ranking_stats: {ranking_stats}\n")
-        f.write(f"avg ranking: {sorted_models}\n")
-        f.write(f"final_ranked_list: {final_ranked_list}\n")
-    return sorted_models, final_ranked_list
 
 # 用来排名base model，第一步base model先进行full sample
 def base_model_judge(base_dir, base_model_list, valid_question_ids=overall_ids):
@@ -1047,15 +1011,14 @@ def count_markdown_elements(markdown_text, suffix):
     }
     return counters
 
-def main(base_dir="/home/yanbin/De-Arena/judgements_mt_bench", valid_question_ids=overall_ids,existing_model_paths=existing_model_paths):
-    sort_model_list = ['o1-mini', 'o1-preview', 'ChatGPT-4o-latest', 'gpt-4o-2024-05-13', 'gpt-4o-2024-08-06', 'gpt-4-1106-preview', 'gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'gpt-4o-mini-2024-07-18']
-    judge_model_list = ['o1-mini', 'o1-preview', 'ChatGPT-4o-latest', 'gpt-4o-2024-05-13', 'gpt-4o-2024-08-06', 'gpt-4-1106-preview', 'gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'gpt-4o-mini-2024-07-18']
-    judge_api_model = ['o1-mini', 'o1-preview', 'ChatGPT-4o-latest', 'gpt-4o-2024-05-13', 'gpt-4o-2024-08-06', 'gpt-4-1106-preview', 'gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'gpt-4o-mini-2024-07-18']
-    model_list = list(existing_model_paths.keys())
+def main(base_dir="judgements_mt_bench", valid_question_ids=overall_ids):
+    global base_model_list
+    global judge_model_list
+    print(base_model_list)
+    print(f"Judge API Model: {judge_api_model}")
+    print(f"Judge Model List: {judge_model_list}")
+    print(f"Base Model List: {base_model_list}")
     judge_model_states = {model: list() for model in judge_model_list}
-
-    base_model_list = ["o1-mini","gpt-4o-mini-2024-07-18","gpt-3.5-turbo-0125",]
-
     judge_dict = base_model_judge(base_dir,base_model_list)
 
     print(judge_dict)
@@ -1071,7 +1034,14 @@ def main(base_dir="/home/yanbin/De-Arena/judgements_mt_bench", valid_question_id
 
     elo_rating_style, style_coef, elo_scores_dict = fit_bt(X, Y, models, weights, flag_weights=False)
     print(elo_rating_style, style_coef, elo_scores_dict)
-    # breakpoint()
+
+    sorted_items = sorted(elo_rating_style.items(), key=lambda item: item[1], reverse=True)
+
+    # 获取排名
+    base_model_ranking = {item[0]: rank + 1 for rank, item in enumerate(sorted_items)}
+    print(base_model_ranking)
+    base_model_list = sorted(base_model_ranking, key=elo_rating_style.get, reverse=True)
+    print(base_model_list)
 
     start_time = time.time()
 
