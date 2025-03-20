@@ -35,6 +35,7 @@ In De-Arena, we focus on the idea of decentralization that uses all LLMs as judg
 from relying on a single or a small number of judge models. To achieve it, we devise the coarse-to-fine incremental sort algorithm to efficiently rank a large number of LLMs, and the automatic question selection algorithm to select representative data for building new evaluation dimension.
 
 ## Pipeline
+Before Start, remember to change the model path in file **utils_final.py**.
 ### API Example
 This example provides the ranking of nine OpenAI API models. The results from the first step have already been stored in **"mt_bench_responses"**, and some results from the second step have also been stored in **"judgements_mt_bench"**. 
 
