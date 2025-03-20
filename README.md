@@ -73,7 +73,7 @@ This example provides the ranking of nine OpenAI API models. The results from th
 
 - 2. bash judge.bash
 
-  In this process, to accelerate the evaluation, we first obtain the full sample judge results for each open-source model using this script. The duration of this process depends on the number of GPUs available. However, make sure to modify the **`model_name`** parameter and run this script for all open-source models.
+  In this process, to accelerate the evaluation, we first obtain the full sample judge results for each open-source model by using this script. The duration of this process depends on the number of GPUs available. However, make sure to modify the **`model_name`** parameter and run this script for **all open-source models** you want to use as judge model.
 
   Parameter List:
   
