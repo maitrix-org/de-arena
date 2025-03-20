@@ -32,7 +32,7 @@ def load_model(model_name, gpu_memory_utilization=1, tensor_parallel_size=2):
     if not model_info:
         raise ValueError("Unsupported model")
     if "gemma-2" in model_name.lower():
-        os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER"
+        os.environ["VLLM_ATTENTION_BACKEND"] = "FLASH_ATTN"
     if os.path.exists(model_info):
         print(f"HF model detected, loading from: {model_info}")
         vllm_model = LLM(model=model_info, gpu_memory_utilization=gpu_memory_utilization, tensor_parallel_size=tensor_parallel_size, enforce_eager=True, trust_remote_code=True)
@@ -41,71 +41,20 @@ def load_model(model_name, gpu_memory_utilization=1, tensor_parallel_size=2):
     raise FileNotFoundError("Model path does not exist")
 
 def load_tokenizer(model_name, use_auth_token=None):
-    if "qwen1.5-32b-chat" in model_name.lower():
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-32B-Chat")
-        return tokenizer
-    elif "qwen1.5-14b-chat" in model_name.lower():
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-14B-Chat")
-        return tokenizer
-    elif "qwen1.5-4b-chat" in model_name.lower():
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-4B-Chat")
-        return tokenizer
-    elif "qwen1.5-72b-chat" in model_name.lower():
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen1.5-72B-Chat")
-        return tokenizer
-    elif "qwen2-72b-instruct" in model_name.lower():
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-72B-Instruct")
-        return tokenizer
-    elif "llama3-8b-instruct" in model_name.lower():
+    if "llama3-8b-instruct" in model_name.lower():
         return AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
-    elif "gemma-1.1-7b-it" in model_name.lower():
-        return AutoTokenizer.from_pretrained("google/gemma-1.1-7b-it", use_auth_token=use_auth_token)
-    elif "gemma-2-27b-it" in model_name.lower():
-        return AutoTokenizer.from_pretrained("google/gemma-2-27b-it", use_auth_token=use_auth_token)
-    elif "mistral-8x7b-instruct-v0.1" in model_name.lower():
-        return AutoTokenizer.from_pretrained("mistralai/Mixtral-8x7B-Instruct-v0.1")
+    elif "llama-3.1-tulu-8b" in model_name.lower():
+        return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/llama-3.1-tulu-8b")
     elif "zephyr-7b-beta" in model_name.lower():
         return AutoTokenizer.from_pretrained("HuggingFaceH4/zephyr-7b-beta") 
-    elif "yi-34b-chat" in model_name.lower():
-        return AutoTokenizer.from_pretrained("01-ai/Yi-34B-Chat") 
-    elif "yi-1.5-34b-chat" in model_name.lower():
-        return AutoTokenizer.from_pretrained("01-ai/Yi-1.5-34B-Chat") 
-    elif "command-r-(04-2024)" in model_name.lower():
-        return AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-v01") 
-    elif "command-r-(08-2024)" in model_name.lower():
-        return AutoTokenizer.from_pretrained("CohereForAI/c4ai-command-r-08-2024") 
-    elif 'athene-70b' in model_name.lower():
-        return AutoTokenizer.from_pretrained("Nexusflow/Athene-70B")
-    elif "llama-3-70b-instruct" in model_name.lower():
-        return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/models--meta-llama--Meta-Llama-3-70B-Instruct/snapshots/7129260dd854a80eb10ace5f61c20324b472b31c") 
-    elif "meta-llama-3.1-70b-instruct" in model_name.lower():
-        return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/models--meta-llama--Meta-Llama-3.1-70B-Instruct/snapshots/33101ce6ccc08fa6249c10a543ebfcac65173393") 
     elif "meta-llama-3.1-8b-instruct" in model_name.lower():
         return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/models--meta-llama--Meta-Llama-3.1-8B-Instruct/snapshots/07eb05b21d191a58c577b4a45982fe0c049d0693") 
     elif "gemma-2-9b-it-simpo" in model_name.lower():
-        return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/models--princeton-nlp--gemma-2-9b-it-SimPO/snapshots/8c87091f412e3aa6f74f66bd86c57fb81cbc3fde") 
+        return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/gemma-2-9b-it-simpo") 
     elif "google-gemma-2-9b-it" in model_name.lower():
-        return AutoTokenizer.from_pretrained("google/gemma-2-9b-it") 
-    elif "gemma-2-2b-it" in model_name.lower():
-        return AutoTokenizer.from_pretrained("google/gemma-2-2b-it") 
-    elif "gemma-1.1-2b-it" in model_name.lower():
-        return AutoTokenizer.from_pretrained("google/gemma-1.1-2b-it") 
-    elif "gemma-7b-it" in model_name.lower():
-        return AutoTokenizer.from_pretrained("google/gemma-7b-it") 
-    elif "gemma-2b-it" in model_name.lower():
-        return AutoTokenizer.from_pretrained("google/gemma-2b-it") 
-    elif "jamba-1.5-mini" in model_name.lower():
-        return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/models--ai21labs--AI21-Jamba-1.5-Mini/snapshots/7cbad0fc5121cb91c6363bacb815fe3aae2ec4f9") 
-    elif "starling-lm-7b-alpha" in model_name.lower():
-        return AutoTokenizer.from_pretrained("berkeley-nest/Starling-LM-7B-alpha") 
-    elif "starling-lm-7b-beta" in model_name.lower():
-        return AutoTokenizer.from_pretrained("Nexusflow/Starling-LM-7B-beta") 
-    elif "koala-13b" in model_name.lower():
-        return AutoTokenizer.from_pretrained("TheBloke/koala-13B-HF") 
-    elif "olmo-7b-instruct" in model_name.lower():
-        return AutoTokenizer.from_pretrained("allenai/OLMo-7B-Instruct")   
-    elif "nemotron-70b" in model_name.lower():
-        return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/models--nvidia--Llama-3.1-Nemotron-70B-Instruct-HF/snapshots/b919e5d07ce15f31ea741f2be99a00a33c3b427b")               
+        return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/google-gemma-2-9b-it") 
+    elif "vicuna-7b" in model_name.lower():
+        return AutoTokenizer.from_pretrained("/data/shared/huggingface/hub/vicuna-7b") 
     return None 
 
 def format_prompt(model_name, prompt, tokenizer=None):
@@ -634,7 +583,7 @@ def get_questions(path):
     return question_map
 
 def run_all_models(output_dir="/home/yanbin/De-Arena/mt_bench_responses", model_names="vicuna-33b", path='/home/yanbin/De-Arena/mt_bench_questions.jsonl', openai_api='111' ,tensor_parallel_size=4, max_tokens=1024, batch_size=100, temperature=0.7, gpu_memory_utilization=0.5, client=None):
-    print(output_dir,model_names,path,tensor_parallel_size)
+    print(model_names)
     question_map = get_questions(path)
     prompts = list(question_map.values())
     question_ids = list(question_map.keys())
@@ -673,18 +622,6 @@ def run_all_models(output_dir="/home/yanbin/De-Arena/mt_bench_responses", model_
                 print(batch_question_ids)
                 # Correct the function call by removing the extra arguments
                 responses = run_claude_model(batch_prompts, client, model_name, max_tokens)
-                print(responses)
-                save_responses(responses, model_name, output_dir, list(range(len(batch_prompts))), batch_prompts, batch_question_ids, False)  
-        elif "mistral" in model_name.lower():
-            num_batches = (len(prompts) + batch_size - 1) // batch_size
-            api_key = ''
-            client = Mistral(api_key=api_key)
-            for i in range(num_batches):
-                batch_prompts = prompts[i * batch_size : (i + 1) * batch_size]
-                batch_question_ids = question_ids[i * batch_size : (i + 1) * batch_size]
-                print(batch_question_ids)
-                # Correct the function call by removing the extra arguments
-                responses = run_mistral_model(batch_prompts, client, model_name, max_tokens)
                 print(responses)
                 save_responses(responses, model_name, output_dir, list(range(len(batch_prompts))), batch_prompts, batch_question_ids, False)  
         elif "gemini" in model_name.lower():
