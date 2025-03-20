@@ -47,7 +47,7 @@ This example provides the ranking of nine OpenAI API models. The results from th
     - path: The path to the question set.
     - openai_api: Your OpenAI API key.
 
-- 2. bash ranking.bash
+- 2. bash ranking api example.bash
      
   Parameter List:
   
@@ -82,7 +82,7 @@ This example provides the ranking of nine OpenAI API models. The results from th
     - path: The path to the question set.
     - q_set: The dimension you are running.
 
-- 3. bash ranking.bash
+- 3. bash ranking open example.bash
      
   Parameter List:
   
