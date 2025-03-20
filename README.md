@@ -32,7 +32,7 @@
 
 ## Introduction of the library
 
-![Library Structure](assets/model_01.png)
+![De-Arena Structure](assets/model_01.png)
 
 In De-Arena, we focus on the idea of decentralization that uses all LLMs as judges to vote on other model pairs, based on high-quality questions each dimension. It can reduce the cost of gathering human annotations, and also avoid the bias that may arise
 from relying on a single or a small number of judge models. To achieve it, we devise the coarse-to-fine incremental sort algorithm to efficiently rank a large number of LLMs, and the automatic question selection algorithm to select representative data for building new evaluation dimension.
