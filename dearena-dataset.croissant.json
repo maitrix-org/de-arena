@@ -1,0 +1,73 @@
+{
+  "@context": "https://mlcommons.org/croissant/context/v0.10.json",
+  "@type": "Dataset",
+  "name": "DeArenaLocalBenchmark",
+  "description": "De-Arena benchmark dataset.",
+  "identifier": "dearena-v1",
+  "datePublished": "2025-05-15",
+  "distribution": [
+    {
+      "@type": "FileObject",
+      "name": "Math_Algebra_v1",
+      "description": "De-Arena Math Algebra Dataset.",
+      "contentUrl": "file:///datasets/math_algebra_questions_v1.jsonl",
+      "encodingFormat": "application/jsonlines"
+    },
+    {
+      "@type": "FileObject",
+      "name": "Math_Geometry_v1",
+      "description": "De-Arena Math Geometry Dataset.",
+      "contentUrl": "file:///datasets/math_geometry_questions_v1.jsonl",
+      "encodingFormat": "application/jsonlines"
+    },
+    {
+      "@type": "FileObject",
+      "name": "Math_Probability_v1",
+      "description": "De-Arena Math Probability Dataset.",
+      "contentUrl": "file:///datasets/math_probability_questions_v1.jsonl",
+      "encodingFormat": "application/jsonlines"
+    },
+    {
+      "@type": "FileObject",
+      "name": "MT-Bench",
+      "description": "MT-Bench Dataset.",
+      "contentUrl": "file:///datasets/mt_bench_questions.jsonl",
+      "encodingFormat": "application/jsonlines"
+    },
+    {
+      "@type": "FileObject",
+      "name": "Reasoning_Logical_v1",
+      "description": "De-Arena Reasoning Logical Dataset.",
+      "contentUrl": "file:///datasets/reasoning_logical_v1.jsonl",
+      "encodingFormat": "application/jsonlines"
+    },
+    {
+      "@type": "FileObject",
+      "name": "Reasoning_Social_v1",
+      "description": "De-Arena Reasoning Social Dataset.",
+      "contentUrl": "file:///datasets/reasoning_social_v1.jsonl",
+      "encodingFormat": "application/jsonlines"
+    },
+    {
+      "@type": "FileObject",
+      "name": "Science_Chemistry_v1",
+      "description": "De-Arena Science Chemistry Dataset.",
+      "contentUrl": "file:///datasets/science_chemistry_v1.jsonl",
+      "encodingFormat": "application/jsonlines"
+    },
+    {
+      "@type": "FileObject",
+      "name": "Science_Biology_v1",
+      "description": "De-Arena Science Biology Dataset.",
+      "contentUrl": "file:///datasets/science_biology_v1.jsonl",
+      "encodingFormat": "application/jsonlines"
+    },
+    {
+      "@type": "FileObject",
+      "name": "Science_Physics_v1",
+      "description": "De-Arena Science Physics Dataset.",
+      "contentUrl": "file:///datasets/science_physics_v1.jsonl",
+      "encodingFormat": "application/jsonlines"
+    }
+  ]
+}
